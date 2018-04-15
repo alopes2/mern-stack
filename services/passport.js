@@ -6,18 +6,26 @@ const keys = require('../config/keys');
 
 const User = mongoose.model('users');
 
+passport.serializeUser((user, done) => {
+  done(null, user.id);
+});
+
+passport.deserializeUser(async (id, done) => {
+  const user =  await User.findById(id);
+  done(null, user);
+});
+
 passport.use(
     new GoogleStrategy({
       clientID: keys.googleClientID,
       clientSecret: keys.googleClientSecret,
       callbackURL:  '/auth/google/callback'
     }, async (accessToken, refreshToken, profile, done) => {
-      const user = await User.findOne({googleId: profile.id});
-      console.log('User found: ', user);
-      if(user) {
-      } else {
-        new User({ googleId: profile.id }).save();
+      let user = await User.findOne({googleId: profile.id});
+      if(!user) {
+        user = await new User({ googleId: profile.id }).save();
+        console.log('[Passport] New user created: ', user);
       }
-      done();
+      done(null, user);
     })
   );
